@@ -1,0 +1,74 @@
+/* App.css - Main application styles with React Router support */
+
+/* Reset all margins and paddings */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* Ensure html and body take full height */
+html, body {
+  height: 100%;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+}
+
+/* Root element full height */
+#root {
+  height: 100vh;
+  width: 100vw;
+  margin: 0;
+  padding: 0;
+}
+
+/* App component full screen */
+.App {
+  height: 100vh;
+  width: 100vw;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+/* React Router containers - ensure they take full height */
+.App > div {
+  height: 100vh;
+  width: 100vw;
+}
+
+/* Make sure Router and Routes take full height */
+.App > div[data-testid] {
+  height: 100vh;
+  width: 100vw;
+}
+
+.App > div:first-child {
+  height: 100vh !important;
+  width: 100vw !important;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Ensure Routes component takes full height */
+.App > div:first-child > div {
+  height: 100vh !important;
+  width: 100vw !important;
+  flex: 1;
+}
+
+/* Alternative approach - use CSS custom properties */
+:root {
+  --full-height: 100vh;
+  --full-width: 100vw;
+}
+
+/* Apply to all route components */
+.route-container {
+  height: var(--full-height);
+  width: var(--full-width);
+  margin: 0;
+  padding: 0;
+}
