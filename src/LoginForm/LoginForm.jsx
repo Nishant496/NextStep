@@ -29,8 +29,8 @@ const LoginForm = () => {
 
   const handleRegisterClick = (e) => {
     e.preventDefault();
-    console.log('Navigate to register');
-    navigate('/register');
+   console.log('Navigate to signup');
+    navigate('/signup');
   };
 
   const handleForgotPassword = (e) => {
@@ -99,7 +99,7 @@ const LoginForm = () => {
             <div className="register-link">
               <p>
                 Don't have an account?{' '}
-                <a href="#" onClick={handleRegisterClick}>
+                <a href="" onClick={handleRegisterClick}>
                   Register
                 </a>
               </p>
