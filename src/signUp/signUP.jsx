@@ -7,6 +7,7 @@ const SignUp = () => {
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
@@ -14,7 +15,6 @@ const SignUp = () => {
     confirmPassword: '',
     agreeTerms: false
   });
-
   const [errors, setErrors] = useState({});
 
   const handleChange = (e) => {
@@ -24,87 +24,50 @@ const SignUp = () => {
       [name]: type === 'checkbox' ? checked : value
     }));
 
-    // Clear error when user starts typing
     if (errors[name]) {
-      setErrors(prev => ({
-        ...prev,
-        [name]: ''
-      }));
+      setErrors(prev => ({ ...prev, [name]: '' }));
     }
   };
 
   const validateForm = () => {
     const newErrors = {};
-
-    if (!formData.fullName.trim()) {
-      newErrors.fullName = 'Full name is required';
-    }
-
-    if (!formData.email.trim()) {
-      newErrors.email = 'Email is required';
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = 'Please enter a valid email';
-    }
-
-    if (!formData.password) {
-      newErrors.password = 'Password is required';
-    } else if (formData.password.length < 6) {
-      newErrors.password = 'Password must be at least 6 characters';
-    }
-
-    if (formData.password !== formData.confirmPassword) {
-      newErrors.confirmPassword = 'Passwords do not match';
-    }
-
-    if (!formData.agreeTerms) {
-      newErrors.agreeTerms = 'You must agree to the terms and conditions';
-    }
-
+    if (!formData.fullName.trim()) newErrors.fullName = 'Full name is required';
+    if (!formData.email.trim()) newErrors.email = 'Email is required';
+    else if (!/\S+@\S+\.\S+/.test(formData.email)) newErrors.email = 'Please enter a valid email';
+    if (!formData.password) newErrors.password = 'Password is required';
+    else if (formData.password.length < 6) newErrors.password = 'Password must be at least 6 characters';
+    if (formData.password !== formData.confirmPassword) newErrors.confirmPassword = 'Passwords do not match';
+    if (!formData.agreeTerms) newErrors.agreeTerms = 'You must agree to the terms and conditions';
     return newErrors;
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
     const newErrors = validateForm();
-
-    if (Object.keys(newErrors).length === 0) {
-      // Store user data for the next step (Register.jsx)
-      // Using sessionStorage instead of localStorage for better compatibility
-      try {
-        sessionStorage.setItem('signupData', JSON.stringify({
-          fullName: formData.fullName,
-          email: formData.email,
-          password: formData.password, // In real app, never store plain password
-          registeredAt: new Date().toISOString()
-        }));
-      } catch (error) {
-        console.log('Storage not available, proceeding without saving data');
-      }
-
-      console.log('User signup completed:', formData);
-      console.log('Navigating to register page for additional details...');
-      
-      // Navigate to register page for additional academic/personal details
-      navigate('/register');
-    } else {
+    if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
-      console.log('Form validation failed:', newErrors);
+      return;
     }
+
+    setIsSubmitting(true);
+    setErrors({});
+
+    // Simulate signup success
+    console.log('Form submitted:', formData);
+    setTimeout(() => {
+      setIsSubmitting(false);
+      alert('Account created successfully!');
+      navigate('/register'); // Navigate after signup
+    }, 1000);
   };
 
   const handleLoginClick = (e) => {
     e.preventDefault();
-    console.log('Navigating back to login page');
     navigate('/');
   };
 
-  const togglePasswordVisibility = () => {
-    setShowPassword(!showPassword);
-  };
-
-  const toggleConfirmPasswordVisibility = () => {
-    setShowConfirmPassword(!showConfirmPassword);
-  };
+  const togglePasswordVisibility = () => setShowPassword(!showPassword);
+  const toggleConfirmPasswordVisibility = () => setShowConfirmPassword(!showConfirmPassword);
 
   return (
     <div className="route-container">
@@ -128,6 +91,7 @@ const SignUp = () => {
                   placeholder="Full Name"
                   className={errors.fullName ? 'error' : ''}
                   required
+                  disabled={isSubmitting}
                 />
                 <FaUser className="input-icon" />
                 {errors.fullName && <span className="error-text">{errors.fullName}</span>}
@@ -143,6 +107,7 @@ const SignUp = () => {
                   placeholder="Email Address"
                   className={errors.email ? 'error' : ''}
                   required
+                  disabled={isSubmitting}
                 />
                 <FaEnvelope className="input-icon" />
                 {errors.email && <span className="error-text">{errors.email}</span>}
@@ -155,14 +120,16 @@ const SignUp = () => {
                   name="password"
                   value={formData.password}
                   onChange={handleChange}
-                  placeholder="Password"
+                  placeholder="Password (min. 6 characters)"
                   className={errors.password ? 'error' : ''}
                   required
+                  disabled={isSubmitting}
                 />
                 <button
                   type="button"
                   className="password-toggle"
                   onClick={togglePasswordVisibility}
+                  disabled={isSubmitting}
                 >
                   {showPassword ? <FaEyeSlash /> : <FaEye />}
                 </button>
@@ -179,11 +146,13 @@ const SignUp = () => {
                   placeholder="Confirm Password"
                   className={errors.confirmPassword ? 'error' : ''}
                   required
+                  disabled={isSubmitting}
                 />
                 <button
                   type="button"
                   className="password-toggle"
                   onClick={toggleConfirmPasswordVisibility}
+                  disabled={isSubmitting}
                 >
                   {showConfirmPassword ? <FaEyeSlash /> : <FaEye />}
                 </button>
@@ -191,7 +160,7 @@ const SignUp = () => {
               </div>
             </div>
 
-            {/* Terms and Conditions */}
+            {/* Terms */}
             <div className="terms-section">
               <label className="terms-label">
                 <input
@@ -200,6 +169,7 @@ const SignUp = () => {
                   checked={formData.agreeTerms}
                   onChange={handleChange}
                   className={errors.agreeTerms ? 'error' : ''}
+                  disabled={isSubmitting}
                 />
                 <span className="checkmark"></span>
                 I agree to the <a href="#" className="terms-link">Terms & Conditions</a> and <a href="#" className="terms-link">Privacy Policy</a>
@@ -208,15 +178,23 @@ const SignUp = () => {
             </div>
 
             {/* Sign Up Button */}
-            <button type="submit" className="signup-btn">
-              Create Account
+            <button
+              type="submit"
+              className="signup-btn"
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? 'Creating Account...' : 'Create Account'}
             </button>
 
             {/* Login Link */}
             <div className="login-link">
               <p>
                 Already have an account?{' '}
-                <a href="#" onClick={handleLoginClick}>
+                <a
+                  href="#"
+                  onClick={handleLoginClick}
+                  style={{ opacity: isSubmitting ? 0.6 : 1 }}
+                >
                   Sign In
                 </a>
               </p>
@@ -234,7 +212,7 @@ const SignUp = () => {
           </form>
         </div>
 
-        {/* Background decorative elements */}
+        {/* Background */}
         <div className="bg-decoration">
           <div className="decoration-circle circle-1"></div>
           <div className="decoration-circle circle-2"></div>

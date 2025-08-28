@@ -1,9 +1,11 @@
 import React, { useState } from "react";
 import "./Register.css";
 import { useNavigate } from "react-router-dom";
+import { useUser } from "@clerk/clerk-react";
 
 export const Register = () => {
   const navigate = useNavigate();
+  const { user } = useUser();
   const [formData, setFormData] = useState({
     name: '',
     roll: '',
@@ -21,11 +23,27 @@ export const Register = () => {
     }));
   };
 
-  const handleNext = (e) => {
+  const handleNext = async (e) => {
     e.preventDefault();
     console.log('Academic Details:', formData);
-    // You can add validation or store data here
-    navigate("/userinput");
+    
+    try {
+      // Mark registration as complete in Clerk
+      await user.update({
+        publicMetadata: {
+          ...user.publicMetadata,
+          hasCompletedRegistration: true,
+          academicDetails: formData // Optional: store the form data
+        },
+      });
+      
+      // Navigate to userinput after successful registration
+      navigate("/userinput");
+    } catch (error) {
+      console.error('Error updating user metadata:', error);
+      // Still navigate even if metadata update fails
+      navigate("/userinput");
+    }
   };
 
   const handleBackToLogin = (e) => {

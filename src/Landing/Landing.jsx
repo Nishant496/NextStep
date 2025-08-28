@@ -1,27 +1,25 @@
-// NextStepLanding.jsx
+// Landing.jsx
 import React, { useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
+import {
+  SignedIn,
+  SignedOut,
+  SignInButton,
+  SignUpButton,
+  UserButton,
+  useUser,
+} from "@clerk/clerk-react";
 import './Landing.css';
 
 const Landing = () => {
   const featuresRef = useRef(null);
+  const navigate = useNavigate();
+  const { user, isLoaded } = useUser();
 
-  // Navigation handlers
-  const handleLogin = () => {
-    // Navigate to Login.jsx - replace with your routing logic
-    window.location.href = '/login';
-    // For React Router: navigate('/login');
-  };
-
-  const handleRegister = () => {
-    // Navigate to signUp.jsx - replace with your routing logic
-    window.location.href = '/signup';
-    // For React Router: navigate('/signup');
-  };
-
+  // Navigation handlers - Updated for Clerk integration
   const handleGetStarted = () => {
-    // Navigate to signUp.jsx - replace with your routing logic
-    window.location.href = '/signup';
-    // For React Router: navigate('/signup');
+    // This will be handled by Clerk's SignUpButton instead
+    featuresRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
   const handleLearnMore = () => {
@@ -34,9 +32,26 @@ const Landing = () => {
   };
 
   const scrollToAbout = () => {
-    // You can create an about section or redirect to about page
     featuresRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
+
+  // Navigate to dashboard for existing users
+  const handleDashboard = () => {
+    navigate('/dashboard'); // Navigate to dashboard.jsx for existing users
+  };
+
+  // Check if user has completed registration
+  useEffect(() => {
+    if (isLoaded && user) {
+      // Check if user has completed the registration process
+      const hasCompletedRegistration = user.publicMetadata?.hasCompletedRegistration;
+      
+      // If user just signed up and hasn't completed registration, go to register
+      if (!hasCompletedRegistration) {
+        navigate('/register');
+      }
+    }
+  }, [user, isLoaded, navigate]);
 
   // Intersection Observer for scroll animations
   useEffect(() => {
@@ -63,13 +78,34 @@ const Landing = () => {
           <span onClick={scrollToHome} className="nav-link">Home</span>
           <span onClick={scrollToAbout} className="nav-link">Features</span>
         </div>
+        
+        {/* Clerk Authentication Buttons */}
         <div className="nav-buttons">
-          <button onClick={handleLogin} className="nav-button">
-            Login
-          </button>
-          <button onClick={handleRegister} className="nav-button">
-            Register
-          </button>
+          <SignedOut>
+            <SignInButton mode="modal">
+              <button className="nav-button">
+                Login
+              </button>
+            </SignInButton>
+            <SignUpButton mode="modal">
+              <button className="nav-button">
+                Register
+              </button>
+            </SignUpButton>
+          </SignedOut>
+          
+          <SignedIn>
+            <button onClick={handleDashboard} className="nav-button">
+              Dashboard
+            </button>
+            <UserButton 
+              appearance={{
+                elements: {
+                  avatarBox: "w-8 h-8 ml-2"
+                }
+              }}
+            />
+          </SignedIn>
         </div>
       </nav>
 
@@ -82,12 +118,27 @@ const Landing = () => {
             placement success. Transform your career journey with personalized 
             guidance and expert insights.
           </p>
-          <button onClick={handleGetStarted} className="hero-btn">
-            Get Started
-          </button>
-          <button onClick={handleLearnMore} className="hero-btn">
-            Learn More
-          </button>
+          
+          {/* Conditional Hero Buttons based on auth state */}
+          <SignedOut>
+            <SignUpButton mode="modal">
+              <button className="hero-btn">
+                Get Started
+              </button>
+            </SignUpButton>
+            <button onClick={handleLearnMore} className="hero-btn">
+              Learn More
+            </button>
+          </SignedOut>
+          
+          <SignedIn>
+            <button onClick={handleDashboard} className="hero-btn">
+              Go to Dashboard
+            </button>
+            <button onClick={handleLearnMore} className="hero-btn">
+              Learn More
+            </button>
+          </SignedIn>
         </div>
         <div className="hero-right">
           {/* Replace with your actual image */}
