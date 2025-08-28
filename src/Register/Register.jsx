@@ -37,12 +37,12 @@ export const Register = () => {
         },
       });
       
-      // Navigate to userinput after successful registration
-      navigate("/userinput");
+      // Navigate to dashboard after successful registration
+      navigate("/dashboard");
     } catch (error) {
       console.error('Error updating user metadata:', error);
       // Still navigate even if metadata update fails
-      navigate("/userinput");
+      navigate("/dashboard");
     }
   };
 

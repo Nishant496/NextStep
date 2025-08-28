@@ -63,7 +63,7 @@ const LoginForm = () => {
           localStorage.setItem("userEmail", formData.email);
         }
         
-        navigate("/userinput"); // redirect after login
+        navigate("/dashboard"); // redirect after login
       } else {
         throw new Error("Invalid credentials");
       }

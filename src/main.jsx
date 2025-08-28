@@ -7,16 +7,23 @@ import { ClerkProvider } from "@clerk/clerk-react"
 const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
 if (!PUBLISHABLE_KEY) {
-  throw new Error("Missing Clerk Publishable Key");
+  // eslint-disable-next-line no-console
+  console.warn("VITE_CLERK_PUBLISHABLE_KEY is not set. Rendering without ClerkProvider.");
 }
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <ClerkProvider 
-      publishableKey={PUBLISHABLE_KEY} 
-      afterSignOutUrl="/"
-    >
+    {PUBLISHABLE_KEY ? (
+      <ClerkProvider 
+        publishableKey={PUBLISHABLE_KEY} 
+        afterSignOutUrl="/"
+        afterSignInUrl="/dashboard"
+        afterSignUpUrl="/register"
+      >
+        <App />
+      </ClerkProvider>
+    ) : (
       <App />
-    </ClerkProvider>
+    )}
   </StrictMode>,
 )
