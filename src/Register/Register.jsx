@@ -2,18 +2,20 @@ import React, { useState } from "react";
 import "./Register.css";
 import { useNavigate } from "react-router-dom";
 import { useUser } from "@clerk/clerk-react";
+import { studentDB } from "../lib/supabase";
 
 export const Register = () => {
   const navigate = useNavigate();
   const { user } = useUser();
   const [formData, setFormData] = useState({
     name: '',
-    roll: '',
     department: '',
     semester: '',
     cgpa: '',
     backlogs: ''
   });
+
+
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -28,21 +30,84 @@ export const Register = () => {
     console.log('Academic Details:', formData);
     
     try {
-      // Mark registration as complete in Clerk
-      await user.update({
-        publicMetadata: {
-          ...user.publicMetadata,
-          hasCompletedRegistration: true,
-          academicDetails: formData // Optional: store the form data
-        },
-      });
+      // Debug: Check if user email exists
+      const userEmail = user.primaryEmailAddress?.emailAddress;
+      console.log('User email:', userEmail);
       
-      // Navigate to dashboard after successful registration
-      navigate("/dashboard");
+      if (!userEmail) {
+        alert('User email not found. Please ensure you are properly signed in.');
+        return;
+      }
+
+
+
+      // Check if user already has a student record
+      const existingUserStudent = await studentDB.getStudentByEmail(userEmail);
+      if (existingUserStudent.success && existingUserStudent.data) {
+        alert('You already have a student profile. Please contact support if you need to update your information.');
+        return;
+      }
+
+      // Save student data to Supabase
+      const studentData = {
+        full_name: formData.name,
+        department: formData.department,
+        academic_year: formData.semester,
+        cgpa: parseFloat(formData.cgpa),
+        active_backlog: parseInt(formData.backlogs) || 0,
+        email: userEmail,
+        phone: null,
+        linkedin_url: null,
+        github_url: null,
+        resume_pdf_url: null
+      };
+
+      console.log('Attempting to save student data:', studentData);
+      const result = await studentDB.createStudent(studentData);
+      console.log('Database operation result:', result);
+      
+      if (result.success) {
+        try {
+          // Store student ID in Clerk metadata for later use
+          await user.update({
+            unsafeMetadata: {
+              hasCompletedRegistration: true,
+              studentId: result.data.id,
+              academicDetails: formData
+            },
+          });
+          
+          console.log('Student data saved successfully:', result.data);
+          console.log('User metadata updated successfully');
+          navigate("/userinput");
+        } catch (clerkError) {
+          console.warn('Failed to update Clerk metadata, but student data was saved:', clerkError);
+          // Try alternative approach - store in localStorage as fallback
+          try {
+            localStorage.setItem('nextStep_studentId', result.data.id);
+            localStorage.setItem('nextStep_registrationComplete', 'true');
+            console.log('Stored student data in localStorage as fallback');
+          } catch (localStorageError) {
+            console.warn('Failed to store in localStorage:', localStorageError);
+          }
+          // Still navigate since the main data was saved successfully
+          navigate("/userinput");
+        }
+      } else {
+        console.error('Failed to save student data:', result.error);
+        
+        // Handle specific database errors
+        if (result.error.includes('duplicate key value violates unique constraint "students_roll_no_key"')) {
+          alert('A student with this roll number already exists. Please check your roll number or contact support if this is an error.');
+        } else if (result.error.includes('duplicate key value violates unique constraint "students_email_key"')) {
+          alert('A student with this email already exists. Please use a different email or contact support.');
+        } else {
+          alert(`Failed to save academic details: ${result.error}`);
+        }
+      }
     } catch (error) {
-      console.error('Error updating user metadata:', error);
-      // Still navigate even if metadata update fails
-      navigate("/dashboard");
+      console.error('Error during registration:', error);
+      alert(`Registration error: ${error.message}`);
     }
   };
 
@@ -77,19 +142,7 @@ export const Register = () => {
                 />
               </div>
 
-              {/* roll no */}
-              <div className="input-group">
-                <label htmlFor="roll">Roll Number</label>
-                <input 
-                  type="text" 
-                  id="roll"
-                  name="roll"
-                  value={formData.roll}
-                  onChange={handleChange}
-                  placeholder="Enter your roll number" 
-                  required 
-                />
-              </div>
+
 
               {/* department */}
               <div className="input-group">
@@ -165,6 +218,8 @@ export const Register = () => {
               <button type="submit" className="next-btn">
                 Continue
               </button>
+
+
             </div>
 
             <div className="platform-info">

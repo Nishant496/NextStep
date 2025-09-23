@@ -2,7 +2,7 @@ import React from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { SignedIn, SignedOut, RedirectToSignIn } from "@clerk/clerk-react";
 import Landing from "./Landing/Landing"; // Import your Landing component
-import Dashboard from "./Dashboard/Dasboard";
+import Dashboard from "./Dashboard/Dashboard";
 import LoginForm from "./LoginForm/LoginForm";
 import { Register } from "./Register/Register";
 import SignUp from "./signUp/signUP";

@@ -1,8 +1,13 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { FaEnvelope, FaPhone, FaMapMarkerAlt, FaCode, FaTools, FaCertificate, FaUpload, FaPlus, FaTimes, FaLinkedin, FaGithub } from 'react-icons/fa';
 import "./UserInput.css";
+import { useUser } from "@clerk/clerk-react";
+import { studentDB, programmingLanguageDB, toolsFrameworkDB, certificationDB } from "../lib/supabase";
+import { useNavigate } from "react-router-dom";
 
 const UserInput = () => {
+  const { user } = useUser();
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     email: '',
     phone: '',
@@ -21,11 +26,87 @@ const UserInput = () => {
     internshipDone: '',
     resumeFile: null
   });
+  const [existingStudentData, setExistingStudentData] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   const [errors, setErrors] = useState({});
 
   // Predefined options
   const programmingLanguageOptions = ['C', 'C++', 'Java', 'Python', 'JavaScript', 'TypeScript', 'Go', 'Rust', 'PHP', 'C#'];
+  
+  // Fetch existing student data when component mounts
+  useEffect(() => {
+    const fetchExistingData = async () => {
+      try {
+        setLoading(true);
+        
+        // Get student ID from Clerk metadata or localStorage fallback
+        let studentId = user.publicMetadata?.studentId || user.unsafeMetadata?.studentId;
+        
+        // Fallback to localStorage if Clerk metadata is not available
+        if (!studentId) {
+          studentId = localStorage.getItem('nextStep_studentId');
+        }
+
+        // Final fallback: resolve student by Clerk email and persist
+        if (!studentId) {
+          const userEmail = user?.primaryEmailAddress?.emailAddress;
+          if (userEmail) {
+            const byEmail = await studentDB.getStudentByEmail(userEmail);
+            if (byEmail.success && byEmail.data?.id) {
+              studentId = byEmail.data.id;
+              try {
+                await user.update({
+                  unsafeMetadata: {
+                    ...(user.unsafeMetadata || {}),
+                    studentId,
+                    hasCompletedRegistration: true
+                  }
+                });
+              } catch {}
+              try {
+                localStorage.setItem('nextStep_studentId', String(studentId));
+                localStorage.setItem('nextStep_registrationComplete', 'true');
+              } catch {}
+            }
+          }
+        }
+
+        if (!studentId) {
+          alert('Student ID not found. Please complete academic registration first.');
+          navigate("/register");
+          return;
+        }
+
+        // Fetch existing student data
+        const studentResult = await studentDB.getStudentById(studentId);
+        if (!studentResult.success) {
+          throw new Error(studentResult.error);
+        }
+
+        setExistingStudentData(studentResult.data);
+        
+        // Pre-fill form with existing data
+        setFormData(prev => ({
+          ...prev,
+          email: studentResult.data.email || '',
+          phone: studentResult.data.phone || '',
+          linkedinUrl: studentResult.data.linkedin_url || '',
+          githubUrl: studentResult.data.github_url || ''
+        }));
+
+      } catch (error) {
+        console.error('Error fetching existing student data:', error);
+        alert('Failed to load existing data. Please try again.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (user) {
+      fetchExistingData();
+    }
+  }, [user, navigate]);
   const toolsFrameworksOptions = ['React', 'Node.js', 'Flutter', 'TensorFlow', 'Docker', 'Angular', 'Vue.js', 'Spring', 'Django', 'MongoDB'];
   const preferredDomainOptions = ['Web Development', 'Mobile Development', 'AI/ML', 'Data Science', 'Cybersecurity', 'DevOps', 'Cloud Computing', 'Embedded Systems', 'Game Development', 'Blockchain'];
 
@@ -111,11 +192,12 @@ const UserInput = () => {
   const validateForm = () => {
     const newErrors = {};
 
-    if (!formData.email.trim()) {
-      newErrors.email = 'Email is required';
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = 'Please enter a valid email';
-    }
+    // Email validation is not needed since it's read-only and pre-filled
+    // if (!formData.email.trim()) {
+    //   newErrors.email = 'Email is required';
+    // } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+    //   newErrors.email = 'Please enter a valid email';
+    // }
 
     if (!formData.phone.trim()) {
       newErrors.phone = 'Phone number is required';
@@ -140,14 +222,134 @@ const UserInput = () => {
     return newErrors;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     const newErrors = validateForm();
 
     if (Object.keys(newErrors).length === 0) {
-      console.log('Form submitted:', formData);
-      // Handle form submission here
-      alert('Form submitted successfully!');
+      try {
+        console.log('Form submitted:', formData);
+        
+        // Get student ID from Clerk metadata or localStorage fallback
+        let studentId = user.publicMetadata?.studentId || user.unsafeMetadata?.studentId;
+        
+        // Fallback to localStorage if Clerk metadata is not available
+        if (!studentId) {
+          studentId = localStorage.getItem('nextStep_studentId');
+        }
+
+        // Final fallback at submit time: resolve by Clerk email and persist
+        if (!studentId) {
+          const userEmail = user?.primaryEmailAddress?.emailAddress;
+          if (userEmail) {
+            const byEmail = await studentDB.getStudentByEmail(userEmail);
+            if (byEmail.success && byEmail.data?.id) {
+              studentId = byEmail.data.id;
+              try {
+                await user.update({
+                  unsafeMetadata: {
+                    ...(user.unsafeMetadata || {}),
+                    studentId,
+                    hasCompletedRegistration: true
+                  }
+                });
+              } catch {}
+              try {
+                localStorage.setItem('nextStep_studentId', String(studentId));
+                localStorage.setItem('nextStep_registrationComplete', 'true');
+              } catch {}
+            }
+          }
+        }
+
+        if (!studentId) {
+          alert('Student ID not found. Please complete academic registration first.');
+          return;
+        }
+
+        // Update student record with additional information
+        // Only update email if it's different from the existing one
+        const updateData = {
+          phone: formData.phone,
+          linkedin_url: formData.linkedinUrl || null,
+          github_url: formData.githubUrl || null,
+          resume_pdf_url: formData.resumeFile ? formData.resumeFile.name : null
+        };
+
+        // Only update email if it's different from existing email
+        if (formData.email !== existingStudentData.email) {
+          updateData.email = formData.email;
+        }
+
+        const updateResult = await studentDB.updateStudent(studentId, updateData);
+        
+        if (!updateResult.success) {
+          throw new Error(`Failed to update student: ${updateResult.error}`);
+        }
+
+        // Save programming languages
+        if (formData.programmingLanguages.length > 0) {
+          const langResult = await programmingLanguageDB.saveStudentLanguages(
+            studentId, 
+            formData.programmingLanguages
+          );
+          if (!langResult.success) {
+            console.warn('Failed to save programming languages:', langResult.error);
+          }
+        }
+
+        // Save tools and frameworks
+        if (formData.toolsFrameworks.length > 0) {
+          const toolResult = await toolsFrameworkDB.saveStudentTools(
+            studentId, 
+            formData.toolsFrameworks
+          );
+          if (!toolResult.success) {
+            console.warn('Failed to save tools/frameworks:', toolResult.error);
+          }
+        }
+
+        // Save certifications if any
+        if (formData.certifications.trim()) {
+          const certData = {
+            student_id: studentId,
+            cert_name: formData.certifications,
+            cert_pdf_url: formData.certificateFiles.length > 0 ? formData.certificateFiles[0].name : '',
+            uploaded_at: new Date().toISOString()
+          };
+
+          const certResult = await certificationDB.createCertification(certData);
+          if (!certResult.success) {
+            console.warn('Failed to save certification:', certResult.error);
+          }
+        }
+
+        // Mark profile as complete in Clerk
+        try {
+          await user.update({
+            unsafeMetadata: {
+              hasCompletedProfile: true,
+              profileData: formData
+            },
+          });
+        } catch (clerkError) {
+          console.warn('Failed to update Clerk metadata:', clerkError);
+          // Store in localStorage as fallback
+          try {
+            localStorage.setItem('nextStep_profileComplete', 'true');
+            localStorage.setItem('nextStep_profileData', JSON.stringify(formData));
+          } catch (localStorageError) {
+            console.warn('Failed to store in localStorage:', localStorageError);
+          }
+        }
+
+        alert('Profile completed successfully!');
+        navigate("/dashboard");
+        
+      } catch (error) {
+        console.error('Error saving profile:', error);
+        alert(`Failed to save profile: ${error.message}`);
+      }
     } else {
       setErrors(newErrors);
     }
@@ -169,6 +371,21 @@ const UserInput = () => {
       ))}
     </div>
   );
+
+  if (loading) {
+    return (
+      <div className="route-container">
+        <div className="userinput-container">
+          <div className="userinput-wrapper">
+            <div className="loading-spinner">
+              <div className="spinner"></div>
+              <p>Loading your profile...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="route-container">
@@ -197,9 +414,14 @@ const UserInput = () => {
                       placeholder="Enter your email address"
                       className={errors.email ? 'error' : ''}
                       required
+                      readOnly
+                      style={{ backgroundColor: '#f5f5f5', cursor: 'not-allowed' }}
                     />
                     <FaEnvelope className="input-icon" />
                     {errors.email && <span className="error-text">{errors.email}</span>}
+                  </div>
+                  <div className="input-helper">
+                    <span>Email is set from your account and cannot be changed</span>
                   </div>
                 </div>
 
