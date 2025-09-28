@@ -11,7 +11,7 @@ if (!API_KEY) {
 // Initialize Gemini AI - using Vite environment variables
 const genAI = new GoogleGenerativeAI(API_KEY);
 const model = genAI.getGenerativeModel({ 
-  model: "gemini-1.5-flash",
+  model: "gemini-2.5-flash", // Updated to current stable model
   generationConfig: {
     temperature: 0.7,
     topK: 40,
@@ -84,15 +84,22 @@ Example format:
   } catch (error) {
     console.error('Gemini API Error:', error);
     
+    // Enhanced error handling for different error types
     if (error.message.includes('API key') || error.message.includes('PERMISSION_DENIED')) {
       throw new Error('Invalid or missing API key. Please check your environment configuration.');
     } else if (error.message.includes('quota') || error.message.includes('RESOURCE_EXHAUSTED')) {
       throw new Error('API quota exceeded. Please try again later.');
     } else if (error.message.includes('INVALID_ARGUMENT')) {
       throw new Error('Invalid request format. Please try rephrasing your question.');
+    } else if (error.message.includes('404') || error.message.includes('not found')) {
+      throw new Error('Model not found. Please check if the model name is correct and supported.');
+    } else if (error.message.includes('429')) {
+      throw new Error('Too many requests. Please wait a moment and try again.');
+    } else if (error.message.includes('500')) {
+      throw new Error('Server error. Please try again in a few moments.');
     }
     
-    throw new Error('Failed to generate roadmap content');
+    throw new Error('Failed to generate roadmap content. Please try again.');
   }
 };
 
